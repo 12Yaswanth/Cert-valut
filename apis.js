@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 
-function authenticate(request, response, next) {
+function authorize(request, response, next) {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -80,7 +80,7 @@ app.post('/api/register', async (request, response) => {
 
 
 
-app.get('/api/Employees/certificates', authenticate, async (request, response) => {
+app.get('/api/Employees/certificates', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
         console.log(request.user.employeeId);
@@ -93,7 +93,7 @@ app.get('/api/Employees/certificates', authenticate, async (request, response) =
     }
 });
 
-app.post('/api/Employees/certificates', authenticate, async (request, response) => {
+app.post('/api/Employees/certificates', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
         const certificateData = request.body;
@@ -105,7 +105,7 @@ app.post('/api/Employees/certificates', authenticate, async (request, response) 
     }
 });
 
-app.put('/api/Employees/certificates/:certificateId', authenticate, async (request, response) => {
+app.put('/api/Employees/certificates/:certificateId', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
         const { certificateId } = request.params;
@@ -118,7 +118,7 @@ app.put('/api/Employees/certificates/:certificateId', authenticate, async (reque
     }
 });
 
-app.delete('/api/Employees/certificates/:certificateId', authenticate, async (request, response) => {
+app.delete('/api/Employees/certificates/:certificateId', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
         const { certificateId } = request.params;
