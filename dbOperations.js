@@ -1,109 +1,144 @@
-const { ConnectDatabase } = require("./db.js");
+const { connectDatabase } = require("./db.js");
+const bcrypt = require('bcrypt');
 let db;
 
-async function ConnectDb() {
+async function connectDb() {
     try {
-        db = await ConnectDatabase();
+        db = await connectDatabase();
         console.log("Connected to the database");
     } catch (error) {
         console.error("Failed to connect to the database:", error.message);
         throw error;
     }
 }
-ConnectDb();
+connectDb();
 
-async function GetAllCertificates(EmployeeId, Sort, OrderBy) {
+async function getAllCertificates(employeeId, sort, orderBy) {
     let response = {};
     try {
         const sql = `
-            SELECT CertificateId, CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl 
-            FROM EmployeeCertificates 
-            WHERE EmployeeId = ? 
-            ORDER BY ${OrderBy} ${Sort}
+            SELECT certificateId, certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId 
+            FROM employeeCertificates 
+            WHERE employeeId = ? 
+            ORDER BY ${orderBy} ${sort}
         `;
-        const certificates = await db.all(sql, [EmployeeId]);
-        response = { ResponseCode: 200, Data: { Certificates: certificates } };
+        const certificates = await db.all(sql, [employeeId]);
+        response = { responseCode: 200, data: { certificates: certificates } };
     } catch (error) {
         console.error(error);
-        response = { ResponseCode: 500, Data: { Error: error.message } };
+        response = { responseCode: 500, data: { error: error.message } };
     }
     return response;
 }
 
-async function InsertCertificate(EmployeeId, certificateData) {
+async function insertCertificate(employeeId, certificateData) {
     let response = {};
-    const { CertificateId, CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl } = certificateData;
+    const { certificateId, certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId } = certificateData;
     try {
         const sql = `
-            INSERT INTO EmployeeCertificates (EmployeeId, CertificateId, CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO employeeCertificates (employeeId, certificateId, certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        await db.run(sql, [EmployeeId, CertificateId, CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl]);
-        const insertedCertificate = await GetCertificate(EmployeeId, CertificateId);
-        response = { ResponseCode: 201, Data: insertedCertificate };
+        await db.run(sql, [employeeId, certificateId, certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId]);
+        const insertedCertificate = await getCertificate(employeeId, certificateId);
+        response = { responseCode: 201, data: insertedCertificate };
     } catch (error) {
-        console.error("Error in InsertCertificate:", error.message);
+        console.error("Error in insertCertificate:", error.message);
         if (error.message.includes('UNIQUE constraint failed')) {
-            response = { ResponseCode: 400, Data: { Error: `Certificate with ID ${CertificateId} already exists.` } };
+            response = { responseCode: 400, data: { error: `Certificate with ID ${certificateId} already exists.` } };
         } else {
-            response = { ResponseCode: 500, Data: { Error: "Failed to insert certificate data" } };
+            response = { responseCode: 500, data: { error: "Failed to insert certificate data" } };
         }
     }
     return response;
 }
 
-async function EditCertificate(EmployeeId, CertificateId, certificateData) {
+async function editCertificate(employeeId, certificateId, certificateData) {
     let response = {};
-    const { CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl } = certificateData;
+    const { certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId } = certificateData;
     try {
         const sql = `
-            UPDATE EmployeeCertificates 
-            SET CertificateName = ?, OrganisationName = ?, IssueDate = ?, ExpiryDate = ?, CertificateUrl = ?
-            WHERE EmployeeId = ? AND CertificateId = ?
+            UPDATE employeeCertificates 
+            SET certificateName = ?, organisationName = ?, issueDate = ?, expiryDate = ?, certificateUrl = ?, credentialId = ?
+            WHERE employeeId = ? AND certificateId = ?
         `;
-        await db.run(sql, [CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl, EmployeeId, CertificateId]);
-        const updatedCertificate = await GetCertificate(EmployeeId, CertificateId);
-        response = { ResponseCode: 200, Data: updatedCertificate};
+        await db.run(sql, [certificateName, organisationName, issueDate, expiryDate, certificateUrl, credentialId, employeeId, certificateId]);
+        const updatedCertificate = await getCertificate(employeeId, certificateId);
+        response = { responseCode: 200, data: updatedCertificate};
     } catch (error) {
         console.error(error.message);
-        response = { ResponseCode: 500, Data: { Error: "Failed to update certificate" } };
+        response = { responseCode: 500, data: { error: "Failed to update certificate" } };
     }
     return response;
 }
 
-async function DeleteCertificate(EmployeeId, CertificateId) {
+async function deleteCertificate(employeeId, certificateId) {
     let response = {};
     try {
-        const sql = 'DELETE FROM EmployeeCertificates WHERE EmployeeId = ? AND CertificateId = ?';
-        await db.run(sql, [EmployeeId, CertificateId]);
-        response = { ResponseCode: 200, Data: { Message: `Certificate with id ${CertificateId} has been deleted successfully` } };
+        const sql = 'DELETE FROM employeeCertificates WHERE employeeId = ? AND certificateId = ?';
+        await db.run(sql, [employeeId, certificateId]);
+        response = { responseCode: 200, data: { message: `Certificate with id ${certificateId} has been deleted successfully` } };
     } catch (error) {
         console.error(error.message);
-        response = { ResponseCode: 500, Data: { Error: "Failed to delete certificate" } };
+        response = { responseCode: 500, data: { error: "Failed to delete certificate" } };
     }
     return response;
 }
 
-async function GetCertificate(EmployeeId, CertificateId) {
+async function getCertificate(employeeId, certificateId) {
     let response = {};
     try {
         const sql = `
-            SELECT CertificateId, CertificateName, OrganisationName, IssueDate, ExpiryDate, CertificateUrl 
-            FROM EmployeeCertificates 
-            WHERE EmployeeId = ? AND CertificateId = ?
+            SELECT certificateId, certificateName, organisationName, issueDate, expiryDate, certificateUrl 
+            FROM employeeCertificates 
+            WHERE employeeId = ? AND certificateId = ?
         `;
-        const certificate = await db.get(sql, [EmployeeId, CertificateId]);
+        const certificate = await db.get(sql, [employeeId, certificateId]);
         response = certificate;
     } catch (error) {
-        response = { ResponseCode: 500, Data: { Error: "Failed to get certificate." } };
+        response = { responseCode: 500, data: { error: "Failed to get certificate." } };
     }
     return response;
+}
+
+
+async function registerUser(employeeId, username, password) {
+    let response = {};
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10); 
+
+        const existingUser = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+        if (existingUser) {
+            response = { responseCode: 400, data: { error: 'Username already exists' } };
+        } else {
+            await db.run('INSERT INTO users (employeeId, username, password) VALUES (?, ?, ?)', [employeeId, username, hashedPassword]);
+            response = { responseCode: 201, data: { message: 'User registered successfully' } };
+        }
+
+    } catch (error) {
+        console.error("Error registering user:", error.message);
+        response = { responseCode: 500, data: { error: 'Failed to register user' } };
+    }
+    return response;
+}
+
+async function getUserByUsername(username) {
+    let user = null;
+    try {
+        user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+    } catch (error) {
+        console.error("Error fetching user by username:", error.message);
+        throw error;
+    }
+    return user;
 }
 
 module.exports = {
-    GetAllCertificates,
-    InsertCertificate,
-    EditCertificate,
-    DeleteCertificate,
-    GetCertificate
+    getAllCertificates,
+    insertCertificate,
+    editCertificate,
+    deleteCertificate,
+    getCertificate,
+    registerUser,
+    getUserByUsername
 };
