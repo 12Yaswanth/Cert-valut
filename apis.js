@@ -1,9 +1,10 @@
+// APIs routes
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
-
 
 const { getAllCertificates, insertCertificate, editCertificate, deleteCertificate, registerUser, getUserByUsername } = require("./dbOperations.js");
 
@@ -13,7 +14,6 @@ const secretKey = process.env.JWT_SECRET;
 
 app.use(cors());
 app.use(express.json());
-
 
 function authorize(request, response, next) {
     const authHeader = request.headers.authorization;
@@ -27,9 +27,6 @@ function authorize(request, response, next) {
     try {
         const decoded = jwt.verify(token, secretKey);
         request.user = decoded;
-        console.log(request.user.employeeId);
-        console.log(request.params.employeeId);
-
 
         next();
     } catch (err) {
@@ -37,9 +34,18 @@ function authorize(request, response, next) {
     }
 }
 
+function verifyToken(token, secretKey) {
+    try {
+        const decoded = jwt.verify(token, secretKey);
+        return decoded;
+    } catch (error) {
+        console.error('Error verifying token:', error.message);
+        return null;
+    }
+}
+
 app.post('/api/login', async (request, response) => {
     const { username, password } = request.body;
-    console.log("login");
 
     try {
         const user = await getUserByUsername(username);
@@ -61,35 +67,45 @@ app.post('/api/register', async (request, response) => {
     try {
         const { employeeId, username, password } = request.body;
 
-        if (!employeeId || !username || !password) {
-            return response.status(400).json({ error: 'Employee ID, username, and password are required' });
+        console.log("Received registration request with data:", { employeeId, username });
+        const existingUser = await getUserByUsername(username);
+        if (existingUser) {
+            console.error("Error: Username already exists");
+            return response.status(409).json({ error: 'Username already exists' });
         }
 
         const registrationResponse = await registerUser(employeeId, username, password);
 
-        response.status(registrationResponse.responseCode).json(registrationResponse.data);
+        console.log("Registration response:", registrationResponse);
+        response.status(201).json(registrationResponse);
     } catch (error) {
         console.error("Error registering user:", error.message);
         response.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
+app.post('/api/validateToken', (req, res) => {
+    const token = req.body.token;
 
+    const isValid = verifyToken(token, secretKey);
 
-
-
-
+    if (isValid) {
+        res.status(200).json({ valid: true });
+    } else {
+        res.status(401).json({ valid: false });
+    }
+});
 
 app.get('/api/Employees/certificates', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
-        console.log(request.user.employeeId);
         const { orderBy = 'IssueDate', sort = 'ASC' } = request.query;
         const responseData = await getAllCertificates(employeeId, sort, orderBy);
-        response.status(responseData.responseCode).json(responseData.data);
+        const statusCode = responseData.error ? 500 : 200;
+        response.status(statusCode).json(responseData);
     } catch (error) {
         console.error(error.message);
-        response.status(error.responseCode || 500).json({ error: error.message || "Internal Error" });
+        response.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
@@ -97,38 +113,72 @@ app.post('/api/Employees/certificates', authorize, async (request, response) => 
     try {
         const employeeId = request.user.employeeId;
         const certificateData = request.body;
+
+        if (!certificateData || !certificateData.certificateName) {
+            return response.status(400).json({ error: 'Certificate Name is required' });
+        }
+
         const responseData = await insertCertificate(employeeId, certificateData);
-        response.status(responseData.responseCode).json(responseData.data);
+        if (responseData.error) {
+            if (responseData.error.includes('constraint')) {
+                return response.status(400).json({ error: 'Certificate with this ID already exists' });
+            }
+            return response.status(500).json({ error: responseData.error });
+        }
+
+        if (responseData.rowsAffected === 0) {
+            return response.status(500).json({ error: 'Failed to insert certificate' });
+        }
+
+        response.status(201).json(responseData);
     } catch (error) {
         console.error(error.message);
-        response.status(error.responseCode || 500).json({ error: error.message || "Internal Server Error" });
+        response.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-app.put('/api/Employees/certificates/:certificateId', authorize, async (request, response) => {
+app.put('/api/Employees/certificates/:credentialId', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
-        const { certificateId } = request.params;
+        const { credentialId } = request.params;
         const certificateData = request.body;
-        const responseData = await editCertificate(employeeId, certificateId, certificateData);
-        response.status(responseData.responseCode).json(responseData.data);
+
+        if (!certificateData || !certificateData.certificateName) {
+            return response.status(400).json({ error: 'Certificate Name is required' });
+        }
+
+        const responseData = await editCertificate(employeeId, credentialId, certificateData);
+        if (responseData.error) {
+            return response.status(500).json({ error: responseData.error });
+        }
+        response.status(200).json(responseData);
     } catch (error) {
         console.error(error.message);
-        response.status(error.responseCode || 500).json({ error: error.message || "Internal Server Error" });
+        response.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-app.delete('/api/Employees/certificates/:certificateId', authorize, async (request, response) => {
+app.delete('/api/Employees/certificates/:credentialId', authorize, async (request, response) => {
     try {
         const employeeId = request.user.employeeId;
-        const { certificateId } = request.params;
-        const deleteResponse = await deleteCertificate(employeeId, certificateId);
-        response.status(deleteResponse.responseCode).json(deleteResponse.data);
+        const { credentialId } = request.params;
+
+        const deleteResponse = await deleteCertificate(employeeId, credentialId);
+        if (deleteResponse.error) {
+            return response.status(500).json({ error: deleteResponse.error });
+        }
+
+        if (deleteResponse.rowsAffected === 0) {
+            return response.status(404).json({ error: 'Certificate not found' });
+        }
+
+        response.status(200).json(deleteResponse);
     } catch (error) {
         console.error(error.message);
-        response.status(error.responseCode || 404).json({ error: error.message || "Not Found" });
+        response.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
 app.get('/api/:employeeId/certificates/search', (request, response) => {
     response.send("");
 });
