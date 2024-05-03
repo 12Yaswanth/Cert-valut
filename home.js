@@ -6,6 +6,20 @@ async function handleError(error, operation) {
     alert(`An error occurred during ${operation}. Please try again later.`);
 }
 
+async function editCertificate(row) {
+    try {
+        const certificate = {};
+        for (let counter = 0; counter < fieldNames.length; counter++) {
+            certificate[fieldNames[counter]] = row.cells[counter].innerText;
+        }
+        console.log(certificate);
+        renderForm(certificate);
+    } catch (error) {
+        handleError(error, 'editing certificate');
+        alert('Failed to edit certificate. Please try again later.');
+    }
+}
+
 async function validateToken(token) {
     const url = `${baseUrl}/api/validateToken`;
     try {
