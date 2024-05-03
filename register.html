@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+</head>
+<body>
+    <h1>Register</h1>
+    <form id="register-form" method="post"> 
+        <input type="text" id="employeeId" name="employeeId" placeholder="Enter Employee ID" required> 
+        <br>
+        <input type="text" id="username" name="username" pattern="[a-zA-Z0-9]+" minlength="3" placeholder="Choose a Username" required> 
+        <br>
+        <input type="password" id="password" name="password" minlength="8" placeholder="Enter Password" required> 
+        <br>
+        <button type="submit">Register</button>
+    </form>
+    <script src="register.js"></script>
+</body>
+</html>
