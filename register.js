@@ -1,3 +1,5 @@
+// to handle the register process
+
 async function register(event) {
     event.preventDefault(); 
     
