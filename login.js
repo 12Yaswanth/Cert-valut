@@ -1,4 +1,4 @@
-document.getElementById('login-form').addEventListener('submit', async (event) => {
+async function login(event) {
     event.preventDefault();
 
     const username = document.getElementById('username').value;
@@ -20,13 +20,18 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
             } else {
                 throw new Error(data.error || 'Failed to login');
             }
+            return;
         }
 
         localStorage.setItem('token', data.token);
-
         window.location.href = 'home.html'; 
     } catch (error) {
         console.error('Error during login:', error.message);
         alert('An error occurred during login. Please try again later.'); 
     }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+    loginForm.addEventListener('submit', login);
 });
