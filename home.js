@@ -1,4 +1,4 @@
-// to manages the certificate-related functionalities
+// to manage the certificate-related functionalities
 
 const baseUrl = 'http://localhost:9393';
 const fieldNames = ['certificateName', 'organisationName', 'issueDate', 'expiryDate', 'certificateUrl', 'credentialId'];
