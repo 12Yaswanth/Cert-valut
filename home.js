@@ -10,6 +10,7 @@ async function handleError(error, operation) {
 
 async function editCertificate(row) {
     try {
+
         const certificate = {};
         for (let counter = 0; counter < fieldNames.length; counter++) {
             certificate[fieldNames[counter]] = row.cells[counter].innerText;
@@ -120,20 +121,23 @@ function closeForm() {
 }
 
 async function getFormData() {
-    const formData = {};
-    for (let fieldCounter = 0; fieldCounter < fieldNames.length; fieldCounter++) {
-        formData[fieldNames[fieldCounter]] = document.getElementById(fieldNames[fieldCounter]).value;
-    }
-    return formData;
+    const form = document.getElementById('certificateForm');
+    const formData = new FormData(form);
+    document.querySelectorAll('input:disabled').forEach(input => {
+        formData.append(input.name, input.value);
+    });
+    const jsonData = Object.fromEntries(formData.entries());
+    return jsonData;
 }
+
 
 async function saveCertificate(event) {
     event.preventDefault();
     const formData = await getFormData();
-    if (!validateCertificateFormData(formData)) {
+    const jsonData = JSON.stringify(Object.fromEntries(formData));
+    if (!validateCertificateFormData(jsonData)) {
         return;
     }
-    const jsonData = JSON.stringify(formData);
     const token = localStorage.getItem('token');
     const url = `${baseUrl}/api/Employees/certificates`;
     try {
@@ -244,10 +248,12 @@ function convertJsonToTable(certificates) {
 async function updateCertificate(event) {
     event.preventDefault();
     const formData = await getFormData();
+    console.log(formData);
     if (!validateCertificateFormData(formData)) {
         return;
     }
     const jsonData = JSON.stringify(formData);
+    console.log(jsonData);
     const token = localStorage.getItem('token');
     const credentialId = formData.credentialId;
     const url = `${baseUrl}/api/Employees/certificates/${credentialId}`;
