@@ -1,3 +1,5 @@
+// to handle the login process
+
 async function login(event) {
     event.preventDefault();
 
